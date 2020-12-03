@@ -1,4 +1,4 @@
-Benchmark Teporal.io performance
+Benchmark Temporal.io performance
 
 generator - creates workflows with piece of data
 
