@@ -13,11 +13,14 @@ import (
 
 func main() {
         temporal := get_env("TEMPORAL_GRPC_ENDPOINT", "0.0.0.0:7233")
+        // client.Options.Identity by default buils as PID@hostname@...?  (group name?)
+        identity := get_env("TEMPORAL_CLIENT_IDENTITY", "")
+        log.Printf("Using Identity: %s", identity)
 
         var c client.Client
         var err error
         for {
-                c, err = client.NewClient(client.Options{HostPort: temporal })
+                c, err = client.NewClient(client.Options{HostPort: temporal, Identity: identity, })
                 if err == nil {
                         break
                 }
