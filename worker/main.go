@@ -8,7 +8,7 @@ import (
         "go.temporal.io/sdk/client"
         "go.temporal.io/sdk/worker"
 
-        "event_sender/app"
+        "stress_test/app"
 )
 
 func main() {

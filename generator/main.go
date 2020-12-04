@@ -17,7 +17,7 @@ import (
 	"go.temporal.io/sdk/client"
         "go.uber.org/ratelimit"
 
-	"event_sender/app"
+	"stress_test/app"
 )
 
 const WORKFLOW_TMPL = "event-sender-%06d"
