@@ -55,6 +55,16 @@ func SingleSendEvent(ctx workflow.Context, events []EventDetails) error {
 
 	signalCh := workflow.GetSignalChannel(ctx, EventSenderSignalName)
 
+        // read one event from queue, if any
+        var evt EventDetails
+        if ok := signalCh.ReceiveAsync(&evt); ok {
+                err := workflow.ExecuteLocalActivity(ctx, SendHTTPTime, evt).Get(ctx, nil)
+                if err != nil {
+                        log.Printf("Activity processing failed: %s", err)
+                        errors++
+                }
+        }
+
 	// read signal queue and restart workflow as new if any signals found
 	var unhandled_events []EventDetails
 	for {
