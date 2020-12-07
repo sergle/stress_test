@@ -31,6 +31,8 @@ func main() {
 
         // This worker hosts both Worker and Activity functions
         w := worker.New(c, app.EventSenderTaskQueue, worker.Options{
+                MaxConcurrentWorkflowTaskPollers: 32,
+                MaxConcurrentActivityTaskPollers: 32,
         })
 
         w.RegisterWorkflow(app.SingleSendEvent)
