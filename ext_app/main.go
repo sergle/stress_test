@@ -30,9 +30,15 @@ func main() {
                 time.Sleep(1 * time.Minute)
                 local_cnt := atomic.LoadUint64(&req_counter)
                 log.Printf("RPS: %.2f (%d -> %d)\n", float64(local_cnt - prev_c) / 60.0, prev_c, local_cnt)
-                prev_c = local_cnt
 
                 log.Println(t.Calc())
+                if local_cnt == prev_c {
+                        // reset old records when no more incoming received
+                        t.Reset()
+                }
+
+
+                prev_c = local_cnt
             }
         })()
 
