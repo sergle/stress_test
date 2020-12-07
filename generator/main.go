@@ -13,6 +13,7 @@ import (
         "errors"
         "sync"
         "sync/atomic"
+        "strings"
 
 	"go.temporal.io/sdk/client"
         "go.uber.org/ratelimit"
@@ -38,23 +39,18 @@ func parse_args() (config, error) {
             return c, errors.New("Not enough arguments")
         }
 
-        //wf_type := os.Args[1]
-
         min, err := strconv.Atoi(os.Args[1])
         if err != nil {
-            //log.Fatalln("unable to parse min workflow id: ", err)
             return c, errors.New( fmt.Sprintf("unable to parse min_wf: %s", err) )
         }
 
         max, err := strconv.Atoi(os.Args[2])
         if err != nil {
-            //log.Fatalln("unable to parse max workflow id: ", err)
             return c, errors.New( fmt.Sprintf("unable to parse max_wf: %s", err) )
         }
 
         rps, err := strconv.Atoi(os.Args[3])
         if err != nil {
-            //log.Fatalln("unable to parse rps: ", err)
             return c, errors.New( fmt.Sprintf("unable to parse rps: %s", err) )
         }
 
@@ -62,7 +58,6 @@ func parse_args() (config, error) {
         if len(os.Args) > 4 {
                 n, err = strconv.Atoi(os.Args[4])
                 if err != nil {
-                        //log.Fatalln("unable to parse rps: ", err)
                         return c, errors.New( fmt.Sprintf("unable to parse n-threads: %s", err) )
                 }
         }
@@ -87,16 +82,23 @@ func main() {
         }
 
 	// Create the client object just once per process
-        temporal := os.Getenv("TEMPORAL_GRPC_ENDPOINT")
-        if len(temporal) == 0 {
-            temporal = "0.0.0.0:7233"
+        // comma-separated list
+        endpoint := os.Getenv("TEMPORAL_GRPC_ENDPOINT")
+        if len(endpoint) == 0 {
+            endpoint = "0.0.0.0:7233"
         }
+        endpoints := strings.Split(endpoint, ",")
 
-	c, err := client.NewClient(client.Options{HostPort: temporal})
-	if err != nil {
-		log.Fatalln("unable to create Temporal client", err)
-	}
-	defer c.Close()
+        var clients []client.Client
+        for _, hostport := range endpoints {
+                c, err := client.NewClient(client.Options{HostPort: hostport })
+                if err != nil {
+                        log.Fatalln("unable to create Temporal client", err)
+                }
+                clients = append(clients, c)
+                log.Printf("Connected to Temporal at %s", hostport)
+        }
+        num_conn := len(clients)
 
         finished := false
 
@@ -174,6 +176,9 @@ func main() {
 
                                         options.ID = fmt.Sprintf(WORKFLOW_TMPL, i)
 
+                                        // round-robin client
+                                        c := clients[ i % num_conn ]
+
                                         _, err := c.SignalWithStartWorkflow(context.Background(), options.ID, app.EventSenderSignalName, event, options, cfg.wf_type)
                                         if err != nil {
                                                 log.Fatalln("error sending signal to %s workflow", options.ID, err)
@@ -192,6 +197,10 @@ func main() {
                 p_stop = p_stop + partition
         }
         wg.Wait()
+
+        for _, client := range clients {
+                client.Close()
+        }
 
         log.Printf("Stop at %d seq\n", seq)
 }
